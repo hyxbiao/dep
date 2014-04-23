@@ -9,9 +9,9 @@ public:
 
 	int init();
 
-	int add(int fd);
+	int add(int fd, int events = EPOLLIN | EPOLLET);
 
-	int del();
+	int del(int fd);
 
 	int wait(struct epoll_event *events, int maxevents, int timeout);
 

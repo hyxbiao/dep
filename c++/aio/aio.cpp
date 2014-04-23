@@ -93,7 +93,13 @@ int accept_handle(int pid, Epoll *epoll, int listenfd)
 int write_handle(int fd)
 {
 	char str[] = "welcome";
-	send(fd, str, sizeof(str), 0);
+	int ret = send(fd, str, sizeof(str), 0);
+	if(ret == -1) {
+		if(errno == EAGAIN || errno == EWOULDBLOCK) {
+			return 1;
+		}
+		return 2;
+	}
 	return 0;
 }
 
@@ -109,20 +115,18 @@ int read_handle(int fd)
 			//errno == EAGAIN means we have read all data
 			if(errno != EAGAIN) {
 				perror("read");
-				close(fd);
+				return 1;
 			}
 			break;
 		} else if(count == 0) {	/* remote close socket */
 			printf("remote close");
-			close(fd);
-			break;
+			return 1;
 		}
 		readed += count;
 	}
 	buf[readed] = 0;
 	printf("read buf: %s\n", buf);
 
-	write_handle(fd);
 	return 0;
 }
 
@@ -152,19 +156,36 @@ int start_worker(int cpu_idx, int listenfd)
 			return 1;
 		}
 		for(int i=0; i<nfds; i++) {
-			if(events[i].events & EPOLLERR ||
-				events[i].events & EPOLLHUP) {
-				perror("epoll");
-				printf("epoll error\n");
-				close(events[i].data.fd);
-				continue;
-			} else if(events[i].data.fd == listenfd) {
+			int fd = events[i].data.fd;
+			if(fd == listenfd) {
 				if(accept_handle(pid, epoll, listenfd) != 0) {
 					delete epoll;
 					return 1;
 				}
 			} else {
-				read_handle(events[i].data.fd);
+				if(events[i].events & EPOLLERR ||
+					events[i].events & EPOLLHUP) {
+					perror("epoll");
+					epoll->del(fd);
+					close(fd);
+				} else if(events[i].events & EPOLLIN) {
+					epoll->del(fd);
+					int ret = read_handle(fd);
+					if(ret != 0) {
+						close(fd);
+					} else {
+						ret = write_handle(fd);
+						if(ret == 1) {
+							epoll->add(fd, EPOLLOUT | EPOLLET);
+						} else {
+							close(fd);
+						}
+					}
+				} else if(events[i].events & EPOLLOUT) {
+					write_handle(fd);
+					epoll->del(fd);
+					close(fd);
+				}
 			}
 		}
 	}

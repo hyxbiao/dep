@@ -15,14 +15,25 @@ int Epoll::init()
 	return 0;
 }
 
-int Epoll::add(int fd)
+int Epoll::add(int fd, int events)
 {
 	struct epoll_event ev;
-	ev.events = EPOLLIN | EPOLLET;
+	//ev.events = EPOLLIN | EPOLLET;
+	ev.events = events;
 	ev.data.fd = fd;
 
 	if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
 		printf("epoll add fail!\n");
+		return -1;
+	}
+	return 0;
+}
+
+int Epoll::del(int fd)
+{
+	if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+		printf("epoll del fail!\n");
+		perror("epoll_ctl");
 		return -1;
 	}
 	return 0;
