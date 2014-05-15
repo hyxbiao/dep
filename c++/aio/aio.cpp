@@ -149,45 +149,7 @@ int start_worker(int cpu_idx, int listenfd)
 	epoll->add(listenfd);
 
 	while(true) {
-		int nfds = epoll->wait(events, MAX_EVENTS, -1);
-		if(nfds == -1) {
-			printf("[child: %d] epoll wait fail!\n", pid);
-			delete epoll;
-			return 1;
-		}
-		for(int i=0; i<nfds; i++) {
-			int fd = events[i].data.fd;
-			if(fd == listenfd) {
-				if(accept_handle(pid, epoll, listenfd) != 0) {
-					delete epoll;
-					return 1;
-				}
-			} else {
-				if(events[i].events & EPOLLERR ||
-					events[i].events & EPOLLHUP) {
-					perror("epoll");
-					epoll->del(fd);
-					close(fd);
-				} else if(events[i].events & EPOLLIN) {
-					epoll->del(fd);
-					int ret = read_handle(fd);
-					if(ret != 0) {
-						close(fd);
-					} else {
-						ret = write_handle(fd);
-						if(ret == 1) {
-							epoll->add(fd, EPOLLOUT | EPOLLET);
-						} else {
-							close(fd);
-						}
-					}
-				} else if(events[i].events & EPOLLOUT) {
-					write_handle(fd);
-					epoll->del(fd);
-					close(fd);
-				}
-			}
-		}
+		epoll->poll(-1);
 	}
 	delete epoll;
 	return 0;
