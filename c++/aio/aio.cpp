@@ -13,24 +13,11 @@
 #include <errno.h>
 #include "epoll.h"
 
-#define	BACKLOG	50
-#define	LOCAL_IP	"127.0.0.1"
-#define	PORT	8701
-
 #define	CHILDS	10
 #define	MAX_EVENTS	100
 
 #define	CPUS	4
 
-int setnonblocking(int sockfd)
-{
-	int flags = fcntl(sockfd, F_GETFL, 0);
-	if(flags < 0 || fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0){ 
-		printf("set nonblock fail!\n");
-		return 1;
-	}
-	return 0;
-}
 int init(int &sockfd) 
 {
 	const int on = 1;
