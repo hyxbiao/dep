@@ -2,6 +2,7 @@
 #include "watcher.h"
 
 
+/*
 Watcher::Watcher()
 	:_cb(NULL), _fd(-1), _event(EV_NONE)
 {
@@ -38,3 +39,4 @@ int Watcher::get_handle()
 {
 	return _fd;
 }
+*/

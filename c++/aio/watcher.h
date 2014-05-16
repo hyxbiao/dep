@@ -9,6 +9,16 @@ enum {
 	EV_ERROR    =    (int)0x80000000
 };
 
+class Reactor;
+
+typedef struct {
+	int active,
+	void (*cb)(Reactor *, Watcher *, int),
+	int fd,
+	int event
+} Watcher;
+
+/*
 class Watcher
 {
 public:
@@ -33,6 +43,7 @@ private:
 	int _fd;
 	int _event;
 };
+*/
 
 
 #endif	//__WATCHER_H

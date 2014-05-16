@@ -3,8 +3,8 @@
 #include "epoll.h"
 
 
-Epollx::Epollx(int max_event) 
-	:_max_event(max_event), _events(NULL)
+Epollx::Epollx(Reactor *reactor, int max_event) 
+	:_max_event(max_event), _events(NULL), _reactor(reactor)
 {
 }
 
@@ -39,15 +39,14 @@ int Epollx::add(Watcher *w)
 {
 	struct epoll_event ev;
 
-	int fd = w->get_handle();
+	int fd = w->fd;
 
-	int ev = w->get_event();
+	int ev = w->event;
 
 	int events = (ev & EV_READ  ? EPOLLIN  : 0)
 			   | (ev & EV_WRITE ? EPOLLOUT : 0);
 
 	ev.events = events;
-	ev.data.fd = fd;
 	ev.data.ptr = (void *)w;
 
 	if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -57,9 +56,30 @@ int Epollx::add(Watcher *w)
 	return 0;
 }
 
+int Epollx::mod(Watcher *w)
+{
+	struct epoll_event ev;
+
+	int fd = w->fd;
+	
+	int ev = w->event;
+
+	int events = (ev & EV_READ  ? EPOLLIN  : 0)
+			   | (ev & EV_WRITE ? EPOLLOUT : 0);
+
+	ev.events = events;
+	ev.data.ptr = (void *)w;
+
+	if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &ev) == -1) {
+		LOG_W("epoll mod fail!");
+		return -1;
+	}
+	return 0;
+}
+
 int Epollx::del(Watcher *w)
 {
-	int fd = w->get_handle();
+	int fd = w->fd;
 	
 	if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, NULL) == -1) {
 		LOG_W("epoll del fail!");
@@ -77,10 +97,11 @@ int Epollx::poll(int timeout)
 	for (int i=0; i<nfds; i++) {
 		struct epoll_event *ev = _events + i;
 		Watcher *w = (Watcher *)ev->data.ptr;
-		int got = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0) 
-			    | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
+		int got = (ev->events & (EPOLLOUT)            ? EV_WRITE : 0) 
+			    | (ev->events & (EPOLLIN)             ? EV_READ  : 0)
+			    | (ev->events & (EPOLLERR | EPOLLHUP) ? EV_ERROR : 0);
 
-		w->callback(got);
+		w->cb(_reactor, w, got);
 	}
 	return 0;
 }

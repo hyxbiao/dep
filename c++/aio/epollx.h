@@ -7,6 +7,7 @@
 
 #include "watcher.h"
 
+class Reactor;
 class Epollx
 {
 public:
@@ -19,6 +20,8 @@ public:
 
 	int add(Watcher *w);
 
+	int mod(Watcher *w);
+
 	int del(Watcher *w);
 
 	int poll(int timeout);
@@ -29,6 +32,8 @@ private:
 	int _epollfd;
 	int _max_event;
 	struct epoll_event *_events;
+
+	Reactor *_reactor;
 };
 
 

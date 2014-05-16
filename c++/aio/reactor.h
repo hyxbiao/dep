@@ -14,12 +14,18 @@ public:
 
 	void destroy();
 
-	int add(Watcher *w);
+	int start(Watcher *w);
 
-	void del(Watcher *w);
+	int stop(Watcher *w);
+
+	void run();
 
 private:
 	Epollx *_epollx;
+	int	_max_event;
+
+	Watcher *_wlist;
+	int _watcher_pool_size;
 };
 
 
