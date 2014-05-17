@@ -13,18 +13,19 @@ class Reactor;
 
 typedef struct {
 	int active,
-	void (*cb)(Reactor *, Watcher *, int),
 	int fd,
-	int event
-} Watcher;
+	int event,
+	void (*cb)(Reactor *, watcher_t *, int),
+	void *data	/*custom*/
+} watcher_t;
 
 /*
-class Watcher
+class watcher_t
 {
 public:
-	typedef void (*cb_t)(Watcher *, int);
+	typedef void (*cb_t)(watcher_t *, int);
 public:
-	Watcher();
+	watcher_t();
 
 	void init(cb_t cb, int fd, int event);
 

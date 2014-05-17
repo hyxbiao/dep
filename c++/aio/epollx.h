@@ -18,11 +18,11 @@ public:
 
 	void destroy();
 
-	int add(Watcher *w);
+	int add(watcher_t *w);
 
-	int mod(Watcher *w);
+	int mod(watcher_t *w);
 
-	int del(Watcher *w);
+	int del(watcher_t *w);
 
 	int poll(int timeout);
 

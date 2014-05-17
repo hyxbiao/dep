@@ -35,7 +35,7 @@ void Epollx::destroy()
 	}
 }
 
-int Epollx::add(Watcher *w)
+int Epollx::add(watcher_t *w)
 {
 	struct epoll_event ev;
 
@@ -56,7 +56,7 @@ int Epollx::add(Watcher *w)
 	return 0;
 }
 
-int Epollx::mod(Watcher *w)
+int Epollx::mod(watcher_t *w)
 {
 	struct epoll_event ev;
 
@@ -77,7 +77,7 @@ int Epollx::mod(Watcher *w)
 	return 0;
 }
 
-int Epollx::del(Watcher *w)
+int Epollx::del(watcher_t *w)
 {
 	int fd = w->fd;
 	
@@ -96,7 +96,7 @@ int Epollx::poll(int timeout)
 	}
 	for (int i=0; i<nfds; i++) {
 		struct epoll_event *ev = _events + i;
-		Watcher *w = (Watcher *)ev->data.ptr;
+		watcher_t *w = (watcher_t *)ev->data.ptr;
 		int got = (ev->events & (EPOLLOUT)            ? EV_WRITE : 0) 
 			    | (ev->events & (EPOLLIN)             ? EV_READ  : 0)
 			    | (ev->events & (EPOLLERR | EPOLLHUP) ? EV_ERROR : 0);

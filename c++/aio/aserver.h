@@ -3,6 +3,7 @@
 #ifdef	__ASERVER_H
 #define	__ASERVER_H
 
+#include "connpool.h"
 #include "watcher.h"
 #include "reactor.h"
 
@@ -13,20 +14,27 @@
 class AsyncServer
 {
 public:
-	AsyncServer();
-
-	void set_reactor(Reactor *reactor);
+	AsyncServer(int backlog, int port, int conn_pool_size);
 
 	int init();
 
-	void run();
+	void run(Reactor *reactor);
+
+protected:
+	virtual void on_accept(connection_t *conn);
+
+	virtual void accept_callback(Reactor *reactor, watcher_t *w, int revent);
+
+private:
+	int accept(Reactor *reactor);
 
 private:
 	int	_backlog;
 	int	_port;
 
-	Reactor *_reactor;
 	int _accept_fd;
+
+	ConnectionPool *_conn_pool;
 };
 
 #endif	//__ASERVER_H

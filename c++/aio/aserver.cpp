@@ -4,8 +4,9 @@
 #include "aserver.h"
 
 
-AsyncServer::AsyncServer(int backlog, int port)
-	:_backlog(backlog), _port(port), _reactor(NULL)
+AsyncServer::AsyncServer(int backlog, int port, int conn_pool_size)
+	:_backlog(backlog), _port(port)
+	 , _conn_pool_size(conn_pool_size), _conn_pool(NULL)
 {
 }
 
@@ -44,9 +45,64 @@ int AsyncServer::init()
 		return -1;
 	}
 
+	_conn_pool = new ConnectionPool(_conn_pool_size);
+	if (_conn_pool->init() < 0) {
+		LOG_E("init connection pool fail");
+		return -1;
+	}
+
 	return 0;
 }
 
-void AsyncServer::run()
+void AsyncServer::run(Reactor *reactor)
 {
+	accept(reactor);
+
+	reactor->run();
+}
+
+int AsyncServer::accept(Reactor *reactor)
+{
+	watcher_t w;
+	w.fd = _accept_fd;
+	w.cb = this->accept_callback;
+	w.event = EV_READ;
+
+	return reactor->start(&w);
+}
+
+void AsyncServer::on_accept(connection_t *conn)
+{
+	int fd = conn->fd;
+	setnonblocking(fd);
+}
+
+void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
+{
+	struct sockaddr_un peer_addr;
+	socklen_t peer_addr_size = sizeof(struct sockaddr_un);
+
+	int accept_fd = w->fd;
+
+	int clientfd = ::accept(accept_fd, (struct sockaddr *) &peer_addr, &peer_addr_size);
+	if(clientfd < 0) {
+		//finish
+		if(errno != EAGAIN && errno != EWOULDBLOCK) {
+			LOG_W("accept fail! error: %s", strerror());
+		}
+		return;
+	}
+	LOG_D("accept success");
+
+	connection_t *conn = _conn_pool->get();
+	if (conn == NULL) {
+		LOG_W("no free connection_t");
+		return;
+	}
+
+	conn->fd = clientfd;
+	conn->data = reactor;
+	on_accept(conn);
+
+	return;
 }

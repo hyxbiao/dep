@@ -14,9 +14,9 @@ public:
 
 	void destroy();
 
-	int start(Watcher *w);
+	int start(watcher_t *w);
 
-	int stop(Watcher *w);
+	int stop(watcher_t *w);
 
 	void run();
 
@@ -24,7 +24,7 @@ private:
 	Epollx *_epollx;
 	int	_max_event;
 
-	Watcher *_wlist;
+	watcher_t *_wlist;
 	int _watcher_pool_size;
 };
 
