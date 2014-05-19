@@ -4,6 +4,7 @@
 #define	__ASERVER_H
 
 #include "connpool.h"
+#include "asocket.h"
 #include "watcher.h"
 #include "reactor.h"
 
@@ -18,12 +19,14 @@ public:
 
 	int init();
 
+	void set_asocket(AsyncSocket *asocket);
+
 	void run(Reactor *reactor);
 
 protected:
 	virtual void on_accept(connection_t *conn);
 
-	virtual void accept_callback(Reactor *reactor, watcher_t *w, int revent);
+	static void accept_callback(Reactor *reactor, watcher_t *w, int revent);
 
 private:
 	int accept(Reactor *reactor);
@@ -35,6 +38,7 @@ private:
 	int _accept_fd;
 
 	ConnectionPool *_conn_pool;
+	AsyncSocket *_asocket;
 };
 
 #endif	//__ASERVER_H

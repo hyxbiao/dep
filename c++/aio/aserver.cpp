@@ -7,13 +7,8 @@
 AsyncServer::AsyncServer(int backlog, int port, int conn_pool_size)
 	:_backlog(backlog), _port(port)
 	 , _conn_pool_size(conn_pool_size), _conn_pool(NULL)
+	 , _asocket(NULL)
 {
-}
-
-
-void AsyncServer::set_reactor(Reactor *reactor)
-{
-	_reactor = reactor;
 }
 
 int AsyncServer::init()
@@ -45,19 +40,27 @@ int AsyncServer::init()
 		return -1;
 	}
 
-	_conn_pool = new ConnectionPool(_conn_pool_size);
-	if (_conn_pool->init() < 0) {
-		LOG_E("init connection pool fail");
-		return -1;
-	}
-
 	return 0;
+}
+
+void AsyncServer::set_asocket(AsyncSocket *asocket)
+{
+	_asocket = asocket;
 }
 
 void AsyncServer::run(Reactor *reactor)
 {
+	//lazy init connection pool for multi processer
+	_conn_pool = new ConnectionPool(_conn_pool_size);
+	if (_conn_pool->init() < 0) {
+		LOG_E("init connection pool fail");
+		return;
+	}
+
+	//start accept
 	accept(reactor);
 
+	//loop run
 	reactor->run();
 }
 
@@ -68,6 +71,8 @@ int AsyncServer::accept(Reactor *reactor)
 	w.cb = this->accept_callback;
 	w.event = EV_READ;
 
+	w.data = this;
+
 	return reactor->start(&w);
 }
 
@@ -75,14 +80,19 @@ void AsyncServer::on_accept(connection_t *conn)
 {
 	int fd = conn->fd;
 	setnonblocking(fd);
+
+	conn->status = S_READABLE;
+	//begin read
+	_asocket->aread(conn);
 }
 
-void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
+static void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
 {
 	struct sockaddr_un peer_addr;
 	socklen_t peer_addr_size = sizeof(struct sockaddr_un);
 
 	int accept_fd = w->fd;
+	AsyncServer *aserver = (AsyncServer *)w->data;
 
 	int clientfd = ::accept(accept_fd, (struct sockaddr *) &peer_addr, &peer_addr_size);
 	if(clientfd < 0) {
@@ -94,15 +104,13 @@ void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
 	}
 	LOG_D("accept success");
 
-	connection_t *conn = _conn_pool->get();
+	connection_t *conn = _conn_pool->get(clientfd);
 	if (conn == NULL) {
 		LOG_W("no free connection_t");
 		return;
 	}
 
-	conn->fd = clientfd;
-	conn->data = reactor;
-	on_accept(conn);
+	aserver->on_accept(conn);
 
 	return;
 }
