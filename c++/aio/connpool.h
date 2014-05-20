@@ -2,6 +2,10 @@
 #ifndef	__CONNPOOL_H
 #define	__CONNPOOL_H
 
+#include "mempool.h"
+
+class ConnectionPool;
+
 typedef struct
 {
 	int fd,
@@ -9,19 +13,20 @@ typedef struct
 	int status,		//socket event status
 
 	void *read_buf,
-	int read_buf_size,
+	size_t read_buf_size,
 
-	int read_cnt,
-	int need_read_cnt,
+	size_t read_cnt,
+	size_t need_read_cnt,
 
 	void *write_buf,
-	int write_buf_size,
+	size_t write_buf_size,
 
-	int write_cnt,
-	int need_write_cnt,
+	size_t write_cnt,
+	size_t need_write_cnt,
 
-	void *conn_pool,	// for free this anywhere
+	ConnectionPool *conn_pool,	// for free this anywhere
 	void *asocket,
+	MemPool *mem_pool,
 
 	void *data
 } connection_t;

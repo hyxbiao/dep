@@ -21,13 +21,16 @@ int ConnectionPool::init()
 		conn->fd = i;
 		conn->status = 0;	//S_NONE
 
+		conn->read_buf = NULL;
 		conn->read_cnt = 0;
 		conn->need_read_cnt = 0;
 
+		conn->write_buf = NULL;
 		conn->write_cnt = 0;
 		conn->need_write_cnt = 0;
 
 		conn->conn_pool = this;
+		conn->mem_pool = NULL;
 
 		conn->active = 0;
 	}
@@ -55,7 +58,7 @@ connection_t * ConnectionPool::get(int fd)
 	}
 	connection_t *conn = _list[fd];
 
-	//conn->fd = fd;
+	conn->fd = fd;
 	conn->active = 1;
 
 	return conn;
@@ -68,9 +71,11 @@ void ConnectionPool::free(connection_t *conn)
 
 	conn->status = 0;
 
+	conn->read_buf = NULL;
 	conn->read_cnt = 0;
 	conn->need_read_cnt = 0;
 
+	conn->write_buf = NULL;
 	conn->write_cnt = 0;
 	conn->need_write_cnt = 0;
 }

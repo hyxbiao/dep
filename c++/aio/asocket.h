@@ -2,7 +2,7 @@
 #ifdef	__ASOCKET_H
 #define	__ASOCKET_H
 
-#include "mempool.h"
+#include "connpool.h"
 #include "watcher.h"
 #include "reactor.h"
 
@@ -19,9 +19,9 @@ enum {
 class AsyncSocket
 {
 public:
-	typedef	void (*cb_t)(connection_t *, int event, void *param);
+	typedef	void (*cb_t)(connection_t *, void *param);
 public:
-	AsyncSocket(Reactor *reactor, MemPool *mempool);
+	AsyncSocket(Reactor *reactor);
 
 	void set_read_done_callback(cb_t cb, void *param);
 
@@ -29,7 +29,9 @@ public:
 
 	int read(connection_t *conn, size_t count);
 
-	int write(cb_t cb, int fd, const void *buf, size_t count);
+	int write(connection_t *conn, size_t count);
+
+	int close(connection_t *conn);
 
 protected:
 	virtual void on_read(connection_t *conn);
@@ -37,7 +39,6 @@ protected:
 
 private:
 	Reactor *_reactor;
-	MemPool *_mempool;
 
 	cb_t _read_done_cb;
 	void* _read_done_cb_p;

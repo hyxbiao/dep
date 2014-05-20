@@ -3,6 +3,7 @@
 #ifdef	__ASERVER_H
 #define	__ASERVER_H
 
+#include "mempool.h"
 #include "connpool.h"
 #include "asocket.h"
 #include "watcher.h"
@@ -11,6 +12,8 @@
 #define	BACKLOG	50
 #define	LOCAL_IP	"127.0.0.1"
 #define	PORT	8701
+#define	MEM_POOL_ALIGNMENT	16
+#define	MEM_POOL_SIZE	4096
 
 class AsyncServer
 {

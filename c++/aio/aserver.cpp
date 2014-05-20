@@ -79,9 +79,10 @@ int AsyncServer::accept(Reactor *reactor)
 void AsyncServer::on_accept(connection_t *conn)
 {
 	int fd = conn->fd;
+
 	setnonblocking(fd);
 
-	conn->status = S_READABLE;
+	conn->mem_pool = MemPool::create(MEM_POOL_ALIGNMENT, MEM_POOL_SIZE);
 	//begin read
 	_asocket->aread(conn);
 }

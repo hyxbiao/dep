@@ -1,14 +1,15 @@
 
 #include "asocket.h"
 
-AsyncSocket::AsyncSocket(Reactor *reactor, MemPool *mempool)
-	:_reactor(reactor), _mempool(mempool)
+AsyncSocket::AsyncSocket(Reactor *reactor)
+	:_reactor(reactor)
 {
 }
 
 int AsyncSocket::aread(connection_t *conn)
 {
 	conn->asocket = this;
+	conn->status = S_READABLE;
 	//TODO read data
 	return 0;
 }
@@ -43,6 +44,22 @@ int AsyncSocket::read(connection_t *conn, size_t count)
 	return 0;
 }
 
+int AsyncSocket::close(connection_t *conn)
+{
+	int fd = conn->fd;
+
+	//free connection_t
+	conn->conn_pool->free(conn);
+
+	//free mem pool
+	if (conn->mem_pool) {
+		MemPool::destroy(conn->mem_pool);
+		conn->mem_pool = NULL;
+	}
+
+	return ::close(fd);
+}
+
 void AsyncSocket::on_read(connection_t *conn)
 {
 	int fd = conn->fd;
@@ -50,15 +67,23 @@ void AsyncSocket::on_read(connection_t *conn)
 
 	watcher_t w;
 	w.fd = fd;
+
+	//TODO timeout
+	
+	//close
 	if (status == S_CLOSE) {
 		_reactor->stop(&w);
-		::close(fd);
+		close(conn);
 		return;
 	}
+
+	//TODO error
+	
 	//read all need_read_cnt data done
 	if (conn->read_cnt == conn->need_read_cnt) {
 		_reactor->stop(&w);
 		_read_done_cb(conn, _read_done_cb_p);
+		return;
 	}
 }
 
