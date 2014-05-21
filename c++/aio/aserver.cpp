@@ -1,4 +1,13 @@
 
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+
 #include "common.h"
 #include "utils.h"
 #include "aserver.h"
@@ -76,18 +85,25 @@ int AsyncServer::accept(Reactor *reactor)
 	return reactor->start(&w);
 }
 
-void AsyncServer::on_accept(connection_t *conn)
+void AsyncServer::on_accept(int fd)
 {
-	int fd = conn->fd;
+	connection_t *conn = _conn_pool->get(fd);
+	if (conn == NULL) {
+		LOG_W("no free connection_t");
+		return;
+	}
 
 	setnonblocking(fd);
 
-	conn->mem_pool = MemPool::create(MEM_POOL_ALIGNMENT, MEM_POOL_SIZE);
 	//begin read
-	_asocket->aread(conn);
+	if (_asocket->init(conn) == 0) {
+		_asocket->aread(conn);
+	} else {
+		_asocket->close(conn);
+	}
 }
 
-static void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
+void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
 {
 	struct sockaddr_un peer_addr;
 	socklen_t peer_addr_size = sizeof(struct sockaddr_un);
@@ -99,19 +115,13 @@ static void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int rev
 	if(clientfd < 0) {
 		//finish
 		if(errno != EAGAIN && errno != EWOULDBLOCK) {
-			LOG_W("accept fail! error: %s", strerror());
+			LOG_W("accept fail! error: %s", strerror(errno));
 		}
 		return;
 	}
 	LOG_D("accept success");
 
-	connection_t *conn = _conn_pool->get(clientfd);
-	if (conn == NULL) {
-		LOG_W("no free connection_t");
-		return;
-	}
-
-	aserver->on_accept(conn);
+	aserver->on_accept(clientfd);
 
 	return;
 }

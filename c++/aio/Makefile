@@ -1,12 +1,19 @@
 
-aio: aio.o epoll.o
-	g++ -o aio aio.o epoll.o
 
-aio.o: aio.cpp
-	g++ -g -c aio.cpp
+CC = g++
+CPPFLAGS = -I.
 
-epoll.o: epoll.cpp epoll.h
-	g++ -g -c epoll.cpp
+DEPS = common.h
+OBJS = aio.o aserver.o asocket.o xheadsocket.o connpool.o mempool.o reactor.o epollx.o watcher.o utils.o
+
+all: server
+
+server: $(OBJS)
+	$(CC) -o $@ $^ $(CPPFLAGS)
+
+%.o: %.c $(DEPS)
+	$(CC) -g -c -o $@ $< $(CPPFLAGS)
+
 
 clean:
-	rm *.o aio
+	rm $(OBJS) server

@@ -1,6 +1,8 @@
 
-#ifdef	__COMMON_H
+#ifndef	__COMMON_H
 #define	__COMMON_H
+
+#include <stdio.h>
 
 #define	LOG_FORMAT(level, format)	"["level"]["__FILE__":%d] "format"\n", __LINE__
 #define	LOG_BASE(level, format, ...)	fprintf(stderr, LOG_FORMAT(level, format), ##__VA_ARGS__)

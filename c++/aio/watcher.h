@@ -1,5 +1,5 @@
 
-#ifdef	__WATCHER_H
+#ifndef	__WATCHER_H
 #define	__WATCHER_H
 
 enum {
@@ -11,12 +11,12 @@ enum {
 
 class Reactor;
 
-typedef struct {
-	int active,
-	int fd,
-	int event,
-	void (*cb)(Reactor *, watcher_t *, int),
-	void *data	/*custom*/
+typedef struct _watcher_t{
+	int active;
+	int fd;
+	int event;
+	void (*cb)(Reactor *, struct _watcher_t *, int);
+	void *data;	/*custom*/
 } watcher_t;
 
 /*

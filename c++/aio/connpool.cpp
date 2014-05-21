@@ -1,4 +1,5 @@
 
+#include "common.h"
 #include "connpool.h"
 
 ConnectionPool::ConnectionPool(int pool_size)
@@ -20,14 +21,17 @@ int ConnectionPool::init()
 
 		conn->fd = i;
 		conn->status = 0;	//S_NONE
+		conn->type = 0;
 
 		conn->read_buf = NULL;
 		conn->read_cnt = 0;
 		conn->need_read_cnt = 0;
+		conn->read_cb = NULL;
 
 		conn->write_buf = NULL;
 		conn->write_cnt = 0;
 		conn->need_write_cnt = 0;
+		conn->write_cb = NULL;
 
 		conn->conn_pool = this;
 		conn->mem_pool = NULL;
@@ -56,7 +60,7 @@ connection_t * ConnectionPool::get(int fd)
 		LOG_W("fd is not valid");
 		return NULL;
 	}
-	connection_t *conn = _list[fd];
+	connection_t *conn = _list + fd;
 
 	conn->fd = fd;
 	conn->active = 1;
@@ -70,14 +74,22 @@ void ConnectionPool::free(connection_t *conn)
 	conn->active = 0;
 
 	conn->status = 0;
+	conn->type = 0;
 
+	reset(conn);
+}
+
+void ConnectionPool::reset(connection_t *conn)
+{
 	conn->read_buf = NULL;
 	conn->read_cnt = 0;
 	conn->need_read_cnt = 0;
+	conn->read_cb = NULL;
 
 	conn->write_buf = NULL;
 	conn->write_cnt = 0;
 	conn->need_write_cnt = 0;
+	conn->write_cb = NULL;
 }
 
 // not safe if use multi thread, need lock

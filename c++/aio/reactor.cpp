@@ -1,16 +1,19 @@
 
+#include <stdlib.h>
+
+#include "common.h"
 #include "reactor.h"
 
 
 Reactor::Reactor(int max_event, int watcher_pool_size)
 	:_epollx(NULL), _max_event(max_event)
-	 , _whead(NULL), _watcher_pool_size(watcher_pool_size)
+	 , _wlist(NULL), _watcher_pool_size(watcher_pool_size)
 {
 }
 
 int Reactor::init()
 {
-	_wlist = malloc(_watcher_pool_size * sizeof(watcher_t));
+	_wlist = (watcher_t *)malloc(_watcher_pool_size * sizeof(watcher_t));
 	if (_wlist == NULL) {
 		LOG_E("malloc watcher pool fail");
 		return -1;

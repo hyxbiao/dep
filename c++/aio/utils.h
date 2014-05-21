@@ -1,5 +1,5 @@
 
-#ifdef	__UTILS_H
+#ifndef	__UTILS_H
 #define	__UTILS_H
 
 int setnonblocking(int sockfd);

@@ -1,5 +1,5 @@
 
-#ifdef	__EPOLLX_H
+#ifndef	__EPOLLX_H
 #define	__EPOLLX_H
 
 #include <stdio.h>
@@ -11,7 +11,7 @@ class Reactor;
 class Epollx
 {
 public:
-	Epollx(int max_event);
+	Epollx(Reactor *reactor, int max_event);
 	~Epollx();
 
 	int init();

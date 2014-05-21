@@ -1,4 +1,7 @@
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "common.h"
 #include "utils.h"
 

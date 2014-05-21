@@ -4,31 +4,39 @@
 
 #include "mempool.h"
 
+class AsyncSocket;
 class ConnectionPool;
 
-typedef struct
+//typedef void (*callback_t)(connection_t *);
+
+typedef struct _connection_t
 {
-	int fd,
-	int active,
-	int status,		//socket event status
+	int fd;
+	int active;
+	int status;		//socket event status
+	int type;		//connection type, LONG(1) or SHORT(0)
 
-	void *read_buf,
-	size_t read_buf_size,
+	void *read_buf;
+	size_t read_buf_size;
 
-	size_t read_cnt,
-	size_t need_read_cnt,
+	size_t read_cnt;
+	size_t need_read_cnt;
 
-	void *write_buf,
-	size_t write_buf_size,
+	void (*read_cb)(struct _connection_t *);
 
-	size_t write_cnt,
-	size_t need_write_cnt,
+	void *write_buf;
+	size_t write_buf_size;
 
-	ConnectionPool *conn_pool,	// for free this anywhere
-	void *asocket,
-	MemPool *mem_pool,
+	size_t write_cnt;
+	size_t need_write_cnt;
 
-	void *data
+	void (*write_cb)(struct _connection_t *);
+
+	ConnectionPool *conn_pool;	// for free this anywhere
+	AsyncSocket *asocket;
+	MemPool *mem_pool;
+
+	void *data;
 } connection_t;
 
 //free pool模式在多线程下不安全，需要加锁
@@ -44,6 +52,8 @@ public:
 	//connection_t * get();
 	
 	void free(connection_t *conn);
+
+	void reset(connection_t *conn);
 private:
 	int _pool_size;
 	int _free_size;

@@ -2,6 +2,7 @@
 #ifndef	__MEMPOOL_H
 #define	__MEMPOOL_H
 
+#include <stdlib.h>
 
 class MemPool
 {
@@ -11,6 +12,7 @@ public:
 
 	void *alloc(size_t size);
 	
+	void reset();
 	//void free(void *ptr);
 
 	void *get_pointer();

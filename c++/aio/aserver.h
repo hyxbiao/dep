@@ -1,6 +1,6 @@
 
 
-#ifdef	__ASERVER_H
+#ifndef	__ASERVER_H
 #define	__ASERVER_H
 
 #include "mempool.h"
@@ -12,8 +12,6 @@
 #define	BACKLOG	50
 #define	LOCAL_IP	"127.0.0.1"
 #define	PORT	8701
-#define	MEM_POOL_ALIGNMENT	16
-#define	MEM_POOL_SIZE	4096
 
 class AsyncServer
 {
@@ -27,7 +25,7 @@ public:
 	void run(Reactor *reactor);
 
 protected:
-	virtual void on_accept(connection_t *conn);
+	virtual void on_accept(int fd);
 
 	static void accept_callback(Reactor *reactor, watcher_t *w, int revent);
 
@@ -40,6 +38,7 @@ private:
 
 	int _accept_fd;
 
+	int _conn_pool_size;
 	ConnectionPool *_conn_pool;
 	AsyncSocket *_asocket;
 };

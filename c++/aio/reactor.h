@@ -1,5 +1,5 @@
 
-#ifdef	__REACTOR_H
+#ifndef	__REACTOR_H
 #define	__REACTOR_H
 
 #include "watcher.h"
@@ -8,7 +8,7 @@
 class Reactor
 {
 public:
-	Reactor();
+	Reactor(int max_event, int watcher_pool_size);
 
 	int init();
 

@@ -2,143 +2,70 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/wait.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sched.h>
 #include <errno.h>
-#include "epoll.h"
+#include <unistd.h>
 
-#define	CHILDS	10
-#define	MAX_EVENTS	100
+#include "common.h"
+#include "mempool.h"
+#include "xheadsocket.h"
+#include "aserver.h"
+
+#define	CHILDS	4
+#define	MAX_EVENTS	64
 
 #define	CPUS	4
 
-int init(int &sockfd) 
+void read_done_callback(connection_t *conn)
 {
-	const int on = 1;
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if(sockfd == -1) {
-		printf("create socket fail !\n");
-		return 1;
-	}
+	AsyncSocket *asocket = conn->asocket;
 
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-	setnonblocking(sockfd);
+	xhead_t *req_head = (xhead_t *)conn->read_buf;
 
-	struct sockaddr_in my_addr;
-	memset(&my_addr, 0, sizeof(struct sockaddr_in));
-	my_addr.sin_family = AF_INET;
-	//my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	my_addr.sin_addr.s_addr = INADDR_ANY;
-	//inet_aton(LOCAL_IP, &(my_addr.sin_addr));
-	my_addr.sin_port = htons(PORT);
+	char *req_body = (char *)(req_head + 1);
 
-	if(bind(sockfd, (struct sockaddr *)&my_addr, sizeof(my_addr)) == -1) {
-		printf("bind fail!\n");
-		perror("bind: ");
-		return 1;
-	}
-	if(listen(sockfd, BACKLOG) == -1) {
-		printf("listen fail!\n");
-		return 1;
-	}
+	LOG_D("request body: %s", req_body);
 
-	return 0;
+	MemPool *pool = conn->mem_pool;
+	conn->write_buf_size = 256;
+	conn->write_buf = pool->alloc(conn->write_buf_size);
+	
+	xhead_t *res_head = (xhead_t *)conn->write_buf;
+	char *res_body = (char *)(res_head + 1);
+	size_t buf_size = conn->write_buf_size - sizeof(xhead_t);
+	res_head->version = req_head->version;
+	res_head->body_len = snprintf(res_body, buf_size, "hello, world!");
+
+	asocket->awrite(conn);
 }
 
-int accept_handle(int pid, Epoll *epoll, int listenfd)
-{
-	struct sockaddr_un peer_addr;
-	socklen_t peer_addr_size;
-	peer_addr_size = sizeof(struct sockaddr_un);
-
-	while(true) {
-		printf("[child: %d] start accept\n", pid);
-		int clientfd = accept(listenfd, (struct sockaddr *) &peer_addr, &peer_addr_size);
-		if(clientfd == -1) {
-			//finish
-			if(errno == EAGAIN || errno == EWOULDBLOCK) {
-				break;
-			}
-			printf("[child: %d] accept fail!\n", pid);
-			perror("accept");
-			return 1;
-		}
-		printf("[child: %d] accept success\n", pid);
-		setnonblocking(clientfd);
-		epoll->add(clientfd);
-	}
-	printf("[child: %d] done accept\n", pid);
-	return 0;
-}
-
-int write_handle(int fd)
-{
-	char str[] = "welcome";
-	int ret = send(fd, str, sizeof(str), 0);
-	if(ret == -1) {
-		if(errno == EAGAIN || errno == EWOULDBLOCK) {
-			return 1;
-		}
-		return 2;
-	}
-	return 0;
-}
-
-int read_handle(int fd)
-{
-	ssize_t count = 0;
-	ssize_t readed = 0;
-	char buf[512];
-
-	while(true) {
-		count = read(fd, buf + readed, sizeof(buf) - readed);
-		if(count == -1) {
-			//errno == EAGAIN means we have read all data
-			if(errno != EAGAIN) {
-				perror("read");
-				return 1;
-			}
-			break;
-		} else if(count == 0) {	/* remote close socket */
-			printf("remote close");
-			return 1;
-		}
-		readed += count;
-	}
-	buf[readed] = 0;
-	printf("read buf: %s\n", buf);
-
-	return 0;
-}
-
-int start_worker(int cpu_idx, int listenfd)
+int start_worker(int cpu_idx, AsyncServer *aserver)
 {
 	cpu_set_t mask;
-
-	struct epoll_event events[MAX_EVENTS];
 
 	int pid = getpid();
 
 	CPU_ZERO(&mask);
 	CPU_SET(cpu_idx, &mask);
-	if(sched_setaffinity(0, sizeof(cpu_set_t), &mask) == -1) {
-		printf("[child: %d][cpu_idx: %d] bind cpu fail\n", pid, cpu_idx);
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) == -1) {
+		LOG_D("[child: %d][cpu_idx: %d] bind cpu fail\n", pid, cpu_idx);
 	}
 
-	Epoll *epoll = new Epoll();
-	epoll->init();
-	epoll->add(listenfd);
-
-	while(true) {
-		epoll->poll(-1);
+	int max_events = 64;
+	int pool_size = 1024;
+	Reactor *reactor = new Reactor(max_events, pool_size);
+	if (reactor->init() != 0) {
+		LOG_E("reactor init fail");
+		return -1;
 	}
-	delete epoll;
+	AsyncSocket *asocket = new XHeadSocket(reactor);
+	asocket->set_read_done_cb(read_done_callback);
+
+	aserver->set_asocket(asocket);
+
+	aserver->run(reactor);
+
 	return 0;
 }
 
@@ -148,7 +75,7 @@ int start_daemon()
 	while(true) {
 		//int pid = waitpid(-1, &status, WNOHANG);
 		int pid = waitpid(-1, &status, 0);
-		printf("[parent] pid: %d\n", pid);
+		LOG_D("[parent] pid: %d", pid);
 		if(pid <= 0) {
 			return 0;
 		}
@@ -158,23 +85,26 @@ int start_daemon()
 
 int main() 
 {
-	int listenfd = 0;
+	int backlog = 50;
+	int port = 8701;
+	int conn_pool_size = 1024;
 
 	//init
-	if(init(listenfd) != 0) {
+	AsyncServer *aserver = new AsyncServer(backlog, port, conn_pool_size);
+	if (aserver->init() != 0) {
+		LOG_E("init async server fail");
 		return -1;
 	}
-	printf("listen fd : %d\n", listenfd);
 
 	//fork
 	for(int i=0; i<CHILDS; i++) {
 		int cpu_idx = i % CPUS;
 		int ret = fork();
 		if(ret == -1) {
-			printf("fork error!");
+			LOG_E("fork error!");
 			return 0;
 		} else if(ret == 0) {
-			start_worker(cpu_idx, listenfd);
+			start_worker(cpu_idx, aserver);
 			return 0;
 		}
 	}

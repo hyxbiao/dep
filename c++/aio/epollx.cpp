@@ -1,6 +1,8 @@
 
+#include <stdlib.h>
+
 #include "common.h"
-#include "epoll.h"
+#include "epollx.h"
 
 
 Epollx::Epollx(Reactor *reactor, int max_event) 
@@ -20,7 +22,7 @@ int Epollx::init()
 	if (_epollfd == -1) {
 		return -1;
 	}
-	_events = malloc(sizeof(struct epoll_event) * _max_event);
+	_events = (struct epoll_event *)malloc(sizeof(struct epoll_event) * _max_event);
 	if (_events == NULL) {
 		return -1;
 	}
@@ -30,8 +32,8 @@ int Epollx::init()
 void Epollx::destroy() 
 {
 	if (_events != NULL) {
-		free(events);
-		events = NULL;
+		free(_events);
+		_events = NULL;
 	}
 }
 
@@ -41,10 +43,10 @@ int Epollx::add(watcher_t *w)
 
 	int fd = w->fd;
 
-	int ev = w->event;
+	int wev = w->event;
 
-	int events = (ev & EV_READ  ? EPOLLIN  : 0)
-			   | (ev & EV_WRITE ? EPOLLOUT : 0);
+	int events = (wev & EV_READ  ? EPOLLIN  : 0)
+			   | (wev & EV_WRITE ? EPOLLOUT : 0);
 
 	ev.events = events;
 	ev.data.ptr = (void *)w;
@@ -62,10 +64,10 @@ int Epollx::mod(watcher_t *w)
 
 	int fd = w->fd;
 	
-	int ev = w->event;
+	int wev = w->event;
 
-	int events = (ev & EV_READ  ? EPOLLIN  : 0)
-			   | (ev & EV_WRITE ? EPOLLOUT : 0);
+	int events = (wev & EV_READ  ? EPOLLIN  : 0)
+			   | (wev & EV_WRITE ? EPOLLOUT : 0);
 
 	ev.events = events;
 	ev.data.ptr = (void *)w;
@@ -90,7 +92,7 @@ int Epollx::del(watcher_t *w)
 
 int Epollx::poll(int timeout)
 {
-	int nfds = epoll_wait(_events, _max_event, timeout);
+	int nfds = epoll_wait(_epollfd, _events, _max_event, timeout);
 	if (nfds < 0) {
 		return -1;
 	}
