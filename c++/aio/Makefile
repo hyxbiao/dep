@@ -11,7 +11,7 @@ all: server
 server: $(OBJS)
 	$(CC) -o $@ $^ $(CPPFLAGS)
 
-%.o: %.c $(DEPS)
+%.o: %.cpp $(DEPS)
 	$(CC) -g -c -o $@ $< $(CPPFLAGS)
 
 

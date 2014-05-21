@@ -109,7 +109,7 @@ void AsyncServer::accept_callback(Reactor *reactor, watcher_t *w, int revent)
 	socklen_t peer_addr_size = sizeof(struct sockaddr_un);
 
 	int accept_fd = w->fd;
-	AsyncServer *aserver = (AsyncServer *)w->data;
+	AsyncServer *aserver = static_cast<AsyncServer *>(w->data);
 
 	int clientfd = ::accept(accept_fd, (struct sockaddr *) &peer_addr, &peer_addr_size);
 	if(clientfd < 0) {

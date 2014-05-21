@@ -19,7 +19,6 @@ int AsyncSocket::init(connection_t *conn)
 		return -1;
 	}
 	conn->asocket = this;
-	conn->status = S_READABLE;
 
 	return 0;
 }
@@ -35,7 +34,6 @@ int AsyncSocket::finish(connection_t *conn)
 	if (conn->type == 1) {
 		conn->mem_pool->reset();
 		conn->conn_pool->reset(conn);
-		conn->status = S_READABLE;
 		aread(conn);
 	}
 	return 0;
@@ -69,7 +67,7 @@ int AsyncSocket::read(connection_t *conn, size_t count)
 {
 	int fd = conn->fd;
 
-	if (conn->status & S_READABLE == 0) {
+	if ((conn->status & S_READABLE) == 0) {
 		LOG_W("socket is not readable");
 		return -1;
 	}
@@ -99,7 +97,7 @@ int AsyncSocket::write(connection_t *conn, size_t count)
 {
 	int fd = conn->fd;
 
-	if (conn->status & S_WRITEABLE == 0) {
+	if ((conn->status & S_WRITEABLE) == 0) {
 		LOG_W("socket is not writeable");
 		return -1;
 	}

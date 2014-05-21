@@ -45,17 +45,22 @@ int Reactor::start(watcher_t *w)
 	} 
 	int ret = 0;
 	watcher_t *_w = _wlist + fd;
-	if (_w->active == 1) {
-		//no need to modify if only cb change
-		if (_w->event != w->event) {
-			ret = _epollx->mod(w);
-		}
-	} else {
-		ret = _epollx->add(w);
-		_w->active = 1;
-	}
+
+	int cur_event = _w->event;
+
 	_w->cb = w->cb;
 	_w->event = w->event;
+	_w->data = w->data;
+
+	if (_w->active == 1) {
+		//no need to modify if only cb change
+		if (cur_event != w->event) {
+			ret = _epollx->mod(_w);
+		}
+	} else {
+		ret = _epollx->add(_w);
+		_w->active = 1;
+	}
 	return ret;
 }
 
@@ -69,7 +74,7 @@ int Reactor::stop(watcher_t *w)
 	watcher_t *_w = _wlist + fd;
 	if (_w->active == 1) {
 		_w->active = 0;
-		return _epollx->del(w);
+		return _epollx->del(_w);
 	}
 	return 0;
 }

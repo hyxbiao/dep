@@ -26,6 +26,7 @@ int XHeadSocket::init(connection_t *conn)
 
 int XHeadSocket::aread(connection_t *conn)
 {
+	conn->status = S_READABLE;
 	//read xhead_t
 	conn->read_cb = read_xhead_cb;
 
@@ -36,6 +37,8 @@ int XHeadSocket::aread(connection_t *conn)
 
 int XHeadSocket::awrite(connection_t *conn)
 {
+	conn->status = S_WRITEABLE;
+
 	conn->write_cb = write_cb;
 
 	xhead_t *res_head = (xhead_t *)conn->write_buf;
@@ -67,6 +70,7 @@ void XHeadSocket::read_xhead_cb(connection_t *conn)
 	size_t left = conn->read_buf_size - conn->read_cnt;
 	if (body_len > left) {
 		LOG_W("no enough buffer, body_len: %u, left: %lu", body_len, left);
+		asocket->close(conn);
 		return;
 	}
 

@@ -27,7 +27,7 @@ enum {
 class AsyncSocket
 {
 public:
-	typedef	void *(* cb_t)(connection_t *, void *);
+	typedef	void (* cb_t)(connection_t *, void *);
 
 public:
 	AsyncSocket(Reactor *reactor);

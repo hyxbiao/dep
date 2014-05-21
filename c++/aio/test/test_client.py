@@ -3,6 +3,7 @@
 
 import socket
 import threading
+import struct
 
 class Test(threading.Thread):
 	def __init__(self, name):
@@ -11,11 +12,15 @@ class Test(threading.Thread):
 	def run(self):
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		sock.connect(("localhost", 8701))
-		print self.name, "send"
-		sock.send("test")
-		print self.name, "recv"
+		body = 'long long ago'
+		content_head = struct.pack('iI', 1, len(body))
+		print self.name, "send", body
+		sock.send(content_head)
+		sock.send(body)
+		#print self.name, "recv"
 		data = sock.recv(512)
-		print self.name, data
+		version, body_len = struct.unpack("iI", data[:8])
+		print self.name, "recv", data[8:]
 		sock.close()
 		pass
 
